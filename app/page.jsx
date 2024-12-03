@@ -1,18 +1,18 @@
 "use client"
 
-import React, { useState, useMemo } from 'react';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Download, X, FileText, Clock, Trash2 } from 'lucide-react';
-import { Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { Info, ChevronDown, ChevronUp, MailCheck } from 'lucide-react';
 
 // Theme color
 const THEME_COLOR = '#55c1e9';
@@ -59,7 +59,7 @@ const ReportDescription = ({ description, isVisible, onToggle }) => {
         <span>{isVisible ? 'Hide Description' : 'Show Description'}</span>
         {isVisible ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
       </Button>
-      
+
       {isVisible && (
         <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
           <p className="text-sm text-gray-700">{description}</p>
@@ -78,13 +78,22 @@ const ReportGenerator = () => {
   const [reportHistory, setReportHistory] = useState([]);
   const [showDescription, setShowDescription] = useState(false);
 
+  const abortControllerRef = useRef(null)
+
   // Delete report function
   const deleteReport = (reportId) => {
     setReportHistory(prev => prev.filter(report => report.id !== reportId));
   };
 
-  // Rest of the helper functions remain the same...
   const generateReport = () => {
+    // Cancel any existing generation before starting a new one
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new controller for this generation
+    abortControllerRef.current = new AbortController();
+
     setGenerationStatus('generating');
     setProgress(0);
     setDownloadLink(null);
@@ -92,13 +101,21 @@ const ReportGenerator = () => {
     const simulateGeneration = () => {
       let currentProgress = 0;
       const interval = setInterval(() => {
+        // Check if generation has been cancelled
+        if (abortControllerRef.current?.signal.aborted) {
+          clearInterval(interval);
+          setGenerationStatus('cancelled');
+          setProgress(0);
+          return;
+        }
+
         currentProgress += 10;
         setProgress(currentProgress);
 
         if (currentProgress >= 100) {
           clearInterval(interval);
           setGenerationStatus('completed');
-          
+
           const newReport = {
             id: Date.now(),
             type: selectedReport.name,
@@ -110,14 +127,36 @@ const ReportGenerator = () => {
 
           setReportHistory(prev => [newReport, ...prev]);
           setDownloadLink(newReport.downloadLink);
+          // Clear the controller reference after successful completion
+          abortControllerRef.current = null;
         }
       }, 500);
+
+      // Store the interval ID to clean up on cancellation
+      const cleanup = () => {
+        clearInterval(interval);
+      };
+
+      // Add cleanup function to abort controller
+      abortControllerRef.current.signal.addEventListener('abort', cleanup);
     };
 
     simulateGeneration();
   };
 
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   const cancelGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     setGenerationStatus(null);
     setProgress(0);
   };
@@ -152,6 +191,7 @@ const ReportGenerator = () => {
                 <label className="block text-sm font-medium mb-2">Select Report Type</label>
                 <Select onValueChange={(value) => {
                   setSelectedReport(REPORT_TYPES[value]);
+                  setGenerationStatus(null)
                   setFilters({});
                 }}>
                   <SelectTrigger className="border-2 hover:border-[#55c1e9] focus:border-[#55c1e9]">
@@ -169,18 +209,21 @@ const ReportGenerator = () => {
 
               {selectedReport && (
                 <div className="space-y-4 mb-4">
-                  <ReportDescription 
-                  description={selectedReport.description}
-                  isVisible={showDescription}
-                  onToggle={() => setShowDescription(!showDescription)}
+                  <ReportDescription
+                    description={selectedReport.description}
+                    isVisible={showDescription}
+                    onToggle={() => setShowDescription(!showDescription)}
                   />
-                  
+
                   <h3 className="text-lg font-semibold" style={{ color: THEME_COLOR }}>{selectedReport.name} Filters</h3>
                   {selectedReport.filters.map((filter) => (
                     <div key={filter.id} className="mb-2">
                       <label className="block text-sm font-medium mb-1">{filter.label}</label>
                       {filter.type === 'select' ? (
-                        <Select onValueChange={(value) => updateFilter(filter.id, value)}>
+                        <Select onValueChange={(value) => {
+                          updateFilter(filter.id, value)
+                          setGenerationStatus(null)
+                        }}>
                           <SelectTrigger className="border-2 hover:border-[#55c1e9] focus:border-[#55c1e9]">
                             <SelectValue placeholder={`Select ${filter.label}`} />
                           </SelectTrigger>
@@ -193,18 +236,21 @@ const ReportGenerator = () => {
                           </SelectContent>
                         </Select>
                       ) : (
-                        <input 
-                          type={filter.type} 
+                        <input
+                          type={filter.type}
                           className="w-full border-2 rounded p-2 hover:border-[#55c1e9] focus:border-[#55c1e9] outline-none"
-                          onChange={(e) => updateFilter(filter.id, e.target.value)}
+                          onChange={(e) => {
+                            updateFilter(filter.id, e.target.value)
+                            setGenerationStatus(null)
+                          }}
                         />
                       )}
                     </div>
                   ))}
-                  
+
                   {/* Generate Report Button */}
-                  <Button 
-                    onClick={generateReport} 
+                  <Button
+                    onClick={generateReport}
                     disabled={!selectedReport || Object.keys(filters).length !== selectedReport.filters.length}
                     className="w-full text-white"
                     style={{ backgroundColor: THEME_COLOR }}
@@ -219,40 +265,39 @@ const ReportGenerator = () => {
                 <div className="mt-4 p-4 border rounded">
                   <div className="flex justify-between items-center mb-2">
                     <h4 className="font-semibold" style={{ color: THEME_COLOR }}>
-                      {generationStatus === 'generating' 
-                        ? 'Generating Report...' 
+                      {generationStatus === 'generating'
+                        ? 'Generating Report...'
                         : 'Report Generation Complete'}
                     </h4>
                     {generationStatus === 'generating' && (
-                      <Button 
-                        variant="destructive" 
-                        size="sm" 
+                      <Button
+                        variant="destructive"
+                        size="sm"
                         onClick={cancelGeneration}
                       >
                         <X className="mr-2 h-4 w-4" /> Cancel
                       </Button>
                     )}
                   </div>
-                  
+
                   {generationStatus === 'generating' && (
-                    <Progress 
-                      value={progress} 
-                      className="w-full" 
-                      style={{ 
+                    <Progress
+                      value={progress}
+                      className="w-full"
+                      style={{
                         '--progress-background': THEME_COLOR,
-                      }} 
+                      }}
                     />
                   )}
 
                   {generationStatus === 'completed' && (
-                    <div className="flex items-center mt-2">
-                      <Button 
-                        onClick={() => window.open(downloadLink, '_blank')}
-                        className="w-full text-white"
-                        style={{ backgroundColor: THEME_COLOR }}
-                      >
-                        <Download className="mr-2 h-4 w-4" /> Download Report
-                      </Button>
+                    <div className="w-full mt-2">
+                      <div className="w-full mb-4 p-3 bg-green-50 border border-green-200 rounded">
+                        <div className="flex items-center space-x-2">
+                          <MailCheck className="h-5 w-5 text-green-500 flex-shrink-0" />
+                          <p className="text-sm text-gray-700">A link to download the report has also been sent to your email.</p>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -265,7 +310,7 @@ const ReportGenerator = () => {
         <div>
           <Card className="border-t-4" style={{ borderTopColor: THEME_COLOR }}>
             <CardHeader>
-              <CardTitle className="text-xl" style={{ color: THEME_COLOR }}>Previous Reports</CardTitle>
+              <CardTitle className="text-xl" style={{ color: THEME_COLOR }}>Reports Hub</CardTitle>
             </CardHeader>
             <CardContent>
               {activeReports.length === 0 ? (
@@ -274,8 +319,8 @@ const ReportGenerator = () => {
                 <div className="max-h-[600px] overflow-y-auto">
                   <div className="grid gap-2">
                     {activeReports.map((report) => (
-                      <div 
-                        key={report.id} 
+                      <div
+                        key={report.id}
                         className="p-2 border rounded hover:bg-gray-50 transition-colors"
                       >
                         <div className="flex justify-between items-center mb-2">
@@ -289,8 +334,8 @@ const ReportGenerator = () => {
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                               onClick={() => window.open(report.downloadLink, '_blank')}
                               className="hover:text-white hover:border-[#55c1e9]"
@@ -298,8 +343,8 @@ const ReportGenerator = () => {
                             >
                               <Download className="h-4 w-4" />
                             </Button>
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                               onClick={() => deleteReport(report.id)}
                               className="hover:bg-red-500 hover:border-red-500 hover:text-white"
@@ -308,12 +353,12 @@ const ReportGenerator = () => {
                             </Button>
                           </div>
                         </div>
-                        
+
                         {/* Filters Display */}
                         <div className="text-xs text-gray-600 mb-2">
                           <strong>Filters:</strong> {formatFilterDisplay(report.filters)}
                         </div>
-                        
+
                         {/* Expiration */}
                         <div className="flex items-center text-xs text-gray-500">
                           <Clock className="h-3 w-3 mr-1" />
