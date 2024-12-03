@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Download, X, FileText, Clock, Trash2 } from 'lucide-react';
+import { Info, ChevronDown, ChevronUp } from 'lucide-react';
 
 // Theme color
 const THEME_COLOR = '#55c1e9';
@@ -20,6 +21,7 @@ const THEME_COLOR = '#55c1e9';
 const REPORT_TYPES = {
   sales: {
     name: 'Sales Report',
+    description: 'A comprehensive overview of sales performance including revenue by region, product category distribution, and period-over-period comparisons. Use this report to track sales trends and identify top-performing categories.',
     filters: [
       { id: 'dateRange', label: 'Date Range', type: 'date' },
       { id: 'region', label: 'Region', type: 'select', options: ['North', 'South', 'East', 'West'] },
@@ -28,6 +30,7 @@ const REPORT_TYPES = {
   },
   inventory: {
     name: 'Inventory Report',
+    description: 'Detailed analysis of current inventory levels, stock movement, and warehouse capacity utilization. This report helps identify overstocked items, stockouts, and optimize inventory management.',
     filters: [
       { id: 'warehouse', label: 'Warehouse', type: 'select', options: ['Warehouse A', 'Warehouse B', 'Warehouse C'] },
       { id: 'productType', label: 'Product Type', type: 'select', options: ['Raw Materials', 'Finished Goods', 'Spare Parts'] }
@@ -35,11 +38,35 @@ const REPORT_TYPES = {
   },
   revenue: {
     name: 'Revenue Report',
+    description: 'Financial performance analysis showing revenue streams, profit margins, and quarterly comparisons. Use this report for financial planning and identifying revenue growth opportunities.',
     filters: [
       { id: 'year', label: 'Year', type: 'select', options: ['2022', '2023', '2024'] },
       { id: 'quarter', label: 'Quarter', type: 'select', options: ['Q1', 'Q2', 'Q3', 'Q4'] }
     ]
   }
+};
+
+const ReportDescription = ({ description, isVisible, onToggle }) => {
+  return (
+    <div className="mb-4">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onToggle}
+        className="text-gray-600 hover:text-gray-900 flex items-center gap-2 p-0 h-auto"
+      >
+        <Info className="h-4 w-4" />
+        <span>{isVisible ? 'Hide Description' : 'Show Description'}</span>
+        {isVisible ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+      </Button>
+      
+      {isVisible && (
+        <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
+          <p className="text-sm text-gray-700">{description}</p>
+        </div>
+      )}
+    </div>
+  );
 };
 
 const ReportGenerator = () => {
@@ -49,6 +76,7 @@ const ReportGenerator = () => {
   const [progress, setProgress] = useState(0);
   const [downloadLink, setDownloadLink] = useState(null);
   const [reportHistory, setReportHistory] = useState([]);
+  const [showDescription, setShowDescription] = useState(false);
 
   // Delete report function
   const deleteReport = (reportId) => {
@@ -142,6 +170,12 @@ const ReportGenerator = () => {
               {/* Filters */}
               {selectedReport && (
                 <div className="space-y-4 mb-4">
+                  <ReportDescription 
+                  description={selectedReport.description}
+                  isVisible={showDescription}
+                  onToggle={() => setShowDescription(!showDescription)}
+                  />
+                  
                   <h3 className="text-lg font-semibold" style={{ color: THEME_COLOR }}>{selectedReport.name} Filters</h3>
                   {selectedReport.filters.map((filter) => (
                     <div key={filter.id} className="mb-2">
