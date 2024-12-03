@@ -74,7 +74,6 @@ const ReportGenerator = () => {
   const [filters, setFilters] = useState({});
   const [generationStatus, setGenerationStatus] = useState(null);
   const [progress, setProgress] = useState(0);
-  const [downloadLink, setDownloadLink] = useState(null);
   const [reportHistory, setReportHistory] = useState([]);
   const [showDescription, setShowDescription] = useState(false);
 
@@ -96,7 +95,6 @@ const ReportGenerator = () => {
 
     setGenerationStatus('generating');
     setProgress(0);
-    setDownloadLink(null);
 
     const simulateGeneration = () => {
       let currentProgress = 0;
@@ -126,7 +124,6 @@ const ReportGenerator = () => {
           };
 
           setReportHistory(prev => [newReport, ...prev]);
-          setDownloadLink(newReport.downloadLink);
           // Clear the controller reference after successful completion
           abortControllerRef.current = null;
         }
@@ -291,14 +288,15 @@ const ReportGenerator = () => {
                   )}
 
                   {generationStatus === 'completed' && (
-                    <div className="w-full mt-2">
-                      <div className="w-full mb-4 p-3 bg-green-50 border border-green-200 rounded">
-                        <div className="flex items-center space-x-2">
-                          <MailCheck className="h-5 w-5 text-green-500 flex-shrink-0" />
-                          <p className="text-sm text-gray-700">A link to download the report has also been sent to your email.</p>
+                    <div className="w-full mt-2 space-y-3">
+                      <div className="w-full p-3 bg-green-50 border border-green-200 rounded">
+                        <div className="flex items-start space-x-2">
+                          <MailCheck className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                          <p className="text-sm text-gray-700">A copy of the report is now available for download from the Reports Hub below. The link to download the report has also been sent to your email.</p>
                         </div>
                       </div>
                     </div>
+                    
                   )}
                 </div>
               )}
