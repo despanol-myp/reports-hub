@@ -19,29 +19,31 @@ const THEME_COLOR = '#55c1e9';
 
 // Rest of the REPORT_TYPES constant remains the same...
 const REPORT_TYPES = {
-  sales: {
-    name: 'Sales Report',
-    description: 'A comprehensive overview of sales performance including revenue by region, product category distribution, and period-over-period comparisons. Use this report to track sales trends and identify top-performing categories.',
+  rosterVariance: {
+    name: 'Roster Variance Report',
+    description: 'Compare scheduled versus actual worked hours to identify variances in staffing levels. This report helps track overtime, understaffing, and roster compliance across different departments and locations.',
     filters: [
       { id: 'dateRange', label: 'Date Range', type: 'date' },
-      { id: 'region', label: 'Region', type: 'select', options: ['North', 'South', 'East', 'West'] },
-      { id: 'productCategory', label: 'Product Category', type: 'select', options: ['Electronics', 'Clothing', 'Furniture'] }
+      { id: 'department', label: 'Department', type: 'select', options: ['All Departments', 'Operations', 'Administration', 'Support', 'Management'] },
+      { id: 'location', label: 'Location', type: 'select', options: ['All Locations', 'Main Office', 'Branch 1', 'Branch 2', 'Branch 3'] }
     ]
   },
-  inventory: {
-    name: 'Inventory Report',
-    description: 'Detailed analysis of current inventory levels, stock movement, and warehouse capacity utilization. This report helps identify overstocked items, stockouts, and optimize inventory management.',
+  payRunImport: {
+    name: 'Pay Run Import Report',
+    description: 'Review and validate payroll data before processing, including regular hours, overtime, allowances, and deductions. This report ensures accurate pay run processing and helps identify any anomalies in payroll data.',
     filters: [
-      { id: 'warehouse', label: 'Warehouse', type: 'select', options: ['Warehouse A', 'Warehouse B', 'Warehouse C'] },
-      { id: 'productType', label: 'Product Type', type: 'select', options: ['Raw Materials', 'Finished Goods', 'Spare Parts'] }
+      { id: 'payPeriod', label: 'Pay Period', type: 'select', options: ['Weekly', 'Fortnightly', 'Monthly'] },
+      { id: 'payRunDate', label: 'Pay Run Date', type: 'date' },
+      { id: 'employeeType', label: 'Employee Type', type: 'select', options: ['All Employees', 'Full Time', 'Part Time', 'Casual'] }
     ]
   },
-  revenue: {
-    name: 'Revenue Report',
-    description: 'Financial performance analysis showing revenue streams, profit margins, and quarterly comparisons. Use this report for financial planning and identifying revenue growth opportunities.',
+  shiftInvoice: {
+    name: 'Shift Invoice Report',
+    description: 'Generate detailed invoicing information for all shifts worked, including regular hours, overtime, penalty rates, and additional charges. This report streamlines billing processes and provides transparent cost breakdowns.',
     filters: [
-      { id: 'year', label: 'Year', type: 'select', options: ['2022', '2023', '2024'] },
-      { id: 'quarter', label: 'Quarter', type: 'select', options: ['Q1', 'Q2', 'Q3', 'Q4'] }
+      { id: 'billingPeriod', label: 'Billing Period', type: 'date' },
+      { id: 'clientName', label: 'Client', type: 'select', options: ['All Clients', 'Client A', 'Client B', 'Client C', 'Client D'] },
+      { id: 'invoiceStatus', label: 'Invoice Status', type: 'select', options: ['All', 'Draft', 'Pending', 'Processed', 'Disputed'] }
     ]
   }
 };
@@ -288,7 +290,7 @@ const ReportGenerator = () => {
                   )}
 
                   {generationStatus === 'completed' && (
-                    <div className="w-full mt-2 space-y-3">
+                    <div className="mt-2 space-y-3">
                       <div className="w-full p-3 bg-green-50 border border-green-200 rounded">
                         <div className="flex items-start space-x-2">
                           <MailCheck className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
